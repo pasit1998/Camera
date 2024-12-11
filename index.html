@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QR Code Scanner - Hospital</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f8fb;
+            color: #333;
+            text-align: center;
+        }
+        header {
+            background-color: #007bff;
+            color: white;
+            padding: 20px 0;
+        }
+        header img {
+            max-height: 50px;
+            margin-bottom: 10px;
+        }
+        header h1 {
+            margin: 0;
+            font-size: 24px;
+        }
+        video {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            display: block;
+            border: 2px solid #007bff;
+            border-radius: 10px;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        #error {
+            color: red;
+            margin-top: 10px;
+        }
+        footer {
+            margin-top: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin-top: 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="physician.png" alt="Hospital Logo">
+        <h1>สแกน QR Code ยืมอุปกรณ์</h1>
+    </header>
+    <main>
+        <video id="preview" autoplay></video>
+        <div id="result">กำลังสแกน...</div>
+        <div id="error"></div>
+        <button id="resetBtn" style="display: none;">เริ่มสแกนใหม่</button>
+    </main>
+    <footer>
+        &copy; โรงพยาบาลมหาวิทยาลัยนเรศวร 
+    </footer>
+
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    <script>
+        const videoElement = document.getElementById('preview');
+        const resultElement = document.getElementById('result');
+        const errorElement = document.getElementById('error');
+        const resetBtn = document.getElementById('resetBtn');
+        const codeReader = new ZXing.BrowserMultiFormatReader();
+
+        async function startScanning() {
+            resetBtn.style.display = 'none';
+            resultElement.textContent = 'กำลังสแกน...';
+            errorElement.textContent = '';
+
+            try {
+                const devices = await codeReader.listVideoInputDevices();
+
+                if (devices.length === 0) {
+                    throw new Error('ไม่พบกล้องในอุปกรณ์นี้');
+                }
+
+                // เลือกกล้องตัวแรกถ้าไม่มี label ที่ต้องการ
+                const backCamera = devices.find(device =>
+                    device.label.toLowerCase().includes('back') || 
+                    device.label.toLowerCase().includes('environment')
+                );
+
+                const selectedDeviceId = backCamera ? backCamera.deviceId : devices[0].deviceId;
+
+                await codeReader.decodeFromVideoDevice(selectedDeviceId, videoElement, (result, err) => {
+                    if (result) {
+                        resultElement.textContent = `ข้อมูล: ${result.text}`;
+                        console.log(result.text);
+
+                        // ตัวอย่าง: เปิดลิงก์ถ้าข้อมูลเป็น URL
+                        if (result.text.startsWith('http')) {
+                            window.location.href = result.text;
+                        }
+                        codeReader.reset();
+                        resetBtn.style.display = 'block';
+                    } else if (err) {
+                        console.warn(err.message);
+                    }
+                });
+            } catch (error) {
+                resultElement.textContent = '';
+                errorElement.textContent = 'ไม่สามารถเปิดกล้องได้: ' + error.message;
+                console.error(error);
+            }
+        }
+
+        resetBtn.addEventListener('click', startScanning);
+
+        // เริ่มต้นการสแกนเมื่อหน้าโหลด
+        window.onload = startScanning;
+    </script>
+</body>
+</html>
